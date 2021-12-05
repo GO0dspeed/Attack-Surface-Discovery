@@ -85,14 +85,14 @@ def _run_active(): # Run active recon on the target IPs found during passive rec
 
 def _import_nmap_results(args: list): # import nmap XML file to recon-ng for completeness
     try:
-        subprocess.run(["recon-cli", "-w", f"{args.workspace}", "-m", "import/nmap", "-o", "FILENAME=/tmp/nmap-out", "-x"])
+        subprocess.run(["recon-cli", "-w", f"{args.workspace}", "-m", "import/nmap", "-o", "FILENAME=/tmp/nmap-out", "-x"], stdout=subprocess.DEVNULL)
     except Exception as e:
         _cleanup_temp_files()
         sys.exit(f"An error occurred importing the NMAP results. Please refer to error message:\n{e}") # fail out of program if an error occurs
 
 def _write_output_results(args: list):  # output results to specified file format
     try:
-        subprocess.run(["recon-cli", "-w", args.workspace, "-m", f"reporting/{args.output}", "-o", f"FILENAME={args.filename}"], stdout=subprocess.DEVNULL)
+        subprocess.run(["recon-cli", "-w", args.workspace, "-m", f"reporting/{args.output}", "-o", f"FILENAME={args.filename}", "-o", "HEADERS=true", "-x"], stdout=subprocess.DEVNULL)
     except Exception as e:
         sys.exit(f"An error occurred writing results. Please refer to error message:\n{e}")
 
