@@ -29,6 +29,7 @@ def _check_install(): # Validate that recon-ng, recon-cli, and nmap are installe
 def _check_recon_modules(): # Look for the presence of required modules. If not present use subprocess to install items not present on the list
     modules = [
         "import/nmap",
+        "recon/domains-hosts/hackertarget",
         "recon/domains-hosts/google_site_web",
         "recon/domains-hosts/shodan_hostname",
         "recon/hosts-hosts/resolve",
@@ -107,6 +108,7 @@ def main():
     args = _get_arguments()
     recon_modules = [
         "recon/domains-hosts/google_site_web",
+        "recon/domains-hosts/hackertarget",
         "recon/domains-hosts/shodan_hostname",
         "recon/hosts-hosts/resolve",
         "recon/hosts-ports/shodan_ip",
