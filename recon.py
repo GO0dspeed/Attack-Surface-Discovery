@@ -62,7 +62,7 @@ def _check_api_key():   # Checks for the presence of the Shodan API key. If not 
 def _run_passive(modules: list, args: list):    # Runs passive recon for a given domain. Using the list of recon modules above
     for i in modules:
         try:
-            subprocess.run(["recon-cli", "-w", args.workspace, "-m", i, "-o", f"SOURCE={args.domain}", "-x"]) # Run passive enumeration. Output is supressed. DB will update with results
+            subprocess.run(["recon-cli", "-w", args.workspace, "-m", i, "-o", f"SOURCE={args.domain}", "-x"], stdout=subprocess.DEVNULL) # Run passive enumeration. Output is supressed. DB will update with results
         except Exception as e:
             sys.exit(f"An Error Occurred during passive recon. Please refer to error message:\n{e}")   # end program
     return
@@ -79,20 +79,20 @@ def _get_ip_addresses(args: list):    # attempt to get IP addresses from recon-c
 
 def _run_active(): # Run active recon on the target IPs found during passive recon
     try:
-        subprocess.run(["nmap", "-sC", "-sV", "-oX", "/tmp/nmap-out", "-iL", "/tmp/ip-list.txt"])
+        subprocess.run(["nmap", "-sC", "-sV", "-oX", "/tmp/nmap-out", "-iL", "/tmp/ip-list.txt"], stdout=subprocess.DEVNULL)
     except Exception as e:
         sys.exit(f"An error occured during active recon. Please refer to error message:\n{e}")
 
 def _import_nmap_results(args: list): # import nmap XML file to recon-ng for completeness
     try:
-        subprocess.run(["recon-cli", "-w", f"{args.workspace}", "-m", "import/nmap", "-o", "FILENAME=/tmp/nmap-out.xml", "-x"])
+        subprocess.run(["recon-cli", "-w", f"{args.workspace}", "-m", "import/nmap", "-o", "FILENAME=/tmp/nmap-out", "-x"])
     except Exception as e:
         _cleanup_temp_files()
         sys.exit(f"An error occurred importing the NMAP results. Please refer to error message:\n{e}") # fail out of program if an error occurs
 
 def _write_output_results(args: list):  # output results to specified file format
     try:
-        subprocess.run(["recon-cli", "-w", args.workspace, "-m", f"reporting/{args.output}", "-o", f"FILENAME={args.filename}"])
+        subprocess.run(["recon-cli", "-w", args.workspace, "-m", f"reporting/{args.output}", "-o", f"FILENAME={args.filename}"], stdout=subprocess.DEVNULL)
     except Exception as e:
         sys.exit(f"An error occurred writing results. Please refer to error message:\n{e}")
 
@@ -100,7 +100,7 @@ def _cleanup_temp_files():  # housekeeping post run
     try:
         print("Cleaning up temporary files", flush=True)
         os.remove("/tmp/ip-list.txt")
-        os.remove("/tmp/nmap-out.xml")
+        os.remove("/tmp/nmap-out")
     except Exception:
         print(f"Unable to remove files in /tmp/. Please delete /tmp/ip-list.txt and /tmp/nmap-out.xml manually..")  # just in case the files are not deleted automatically
 
@@ -114,22 +114,22 @@ def main():
         "recon/hosts-ports/shodan_ip",
         "recon/netblocks-hosts/shodan_net",
     ]
-    print(f"Attempting automatic passive and active recon on {args.domain}.\nThis could take some time for larger domains...", flush=True)
-    print(f"Beginning installation pre-checks..", flush=True)
+    print(f"[*] Attempting automatic passive and active recon on {args.domain}.\nThis could take some time for larger domains...", flush=True)
+    print(f"[*] Beginning installation pre-checks..", flush=True)
     _check_install()
     _check_recon_modules()
     _check_api_key()
-    print(f"Pre-checks passed. Beginning passive recon on {args.domain}. This can take some time...", flush=True)
+    print(f"[*] Pre-checks passed. Beginning passive recon on {args.domain}. This can take some time...", flush=True)
     _run_passive(recon_modules, args)
     _get_ip_addresses(args)
-    print(f"Passive recon completed. Beginning active recon. Be sure you have permission to scan these IP addresses...", flush=True)
+    print(f"[*] Passive recon completed. Beginning active recon. Be sure you have permission to scan these IP addresses...", flush=True)
     _run_active()
-    print(f"Active recon completed on {args.domain}.", flush=True)
-    print(f"Normalizing results and outputting to {args.output}.")
+    print(f"[*] Active recon completed on {args.domain}.", flush=True)
+    print(f"[*] Normalizing results and outputting to {args.output}.")
     _import_nmap_results(args)
     _write_output_results(args)
-    print(f"Results written to {args.filename}.", flush=True)
-    print(f"Cleaning up temporary files")
+    print(f"[*] Results written to {args.filename}.", flush=True)
+    print(f"[*] Cleaning up temporary files")
     _cleanup_temp_files
 
 if __name__ == "__main__":
