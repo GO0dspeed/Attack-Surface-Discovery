@@ -15,13 +15,14 @@ def _check_install(): # Validate that recon-ng, recon-cli, and nmap are installe
     reconng = False
     reconcli = False
     nmap = False
-    if os.access("recon-ng", os.F_OK):
-        reconng = True
-    if os.access("reconcli", os.F_OK):
-        reconcli = True
-    if os.access("nmap", os.F_OK):
-        nmap = True
-    if reconng or reconcli or nmap == False:
+    for i in os.path.expandvars("$PATH").split(":"):
+        if os.access(f"{i}/recon-ng", os.F_OK):
+            reconng = True
+        elif os.access(f"{i}/recon-cli", os.F_OK):
+            reconcli = True
+        elif os.access(f"{i}/nmap", os.F_OK):
+            nmap = True
+    if (reconng or reconcli or nmap) == False:
         sys.exit("Error: recon-ng and recon-cli must be installed. Please check installation")
     return
 
@@ -47,7 +48,7 @@ def _check_recon_modules(): # Look for the presence of required modules. If not 
             return
 
 def _check_api_key():   # Checks for the presence of the Shodan API key. If not present it will prompt the user to add it using getpass (hides password from user / terminal)
-    reg = re.compile(rb'shodan \| [A-Za-z}+')   # Regex to identify if shodan key is in output of command
+    reg = re.compile(rb'shodan_api \| [A-Za-z]+')   # Regex to identify if shodan key is in output of command
     api_check = subprocess.run(["recon-cli", "-C keys list"], capture_output=True)
     if reg.findall(api_check.stdout):
         return  # End function and continue if they key exists
@@ -60,18 +61,18 @@ def _check_api_key():   # Checks for the presence of the Shodan API key. If not 
 def _run_passive(modules: list, args: list):    # Runs passive recon for a given domain. Using the list of recon modules above
     for i in modules:
         try:
-            subprocess.run(["recon-cli", "-w", {args.workspace}, "-m", {i}, "-o", f"SOURCE={args.domain}", "-x", ">/dev/null"]) # Run passive enumeration. Output is supressed. DB will update with results
+            subprocess.run(["recon-cli", "-w", args.workspace, "-m", i, "-o", f"SOURCE={args.domain}", "-x"]) # Run passive enumeration. Output is supressed. DB will update with results
         except Exception as e:
             sys.exit(f"An Error Occurred during passive recon. Please refer to error message:\n{e}")   # end program
     return
 
-def _get_ip_addresses():    # attempt to get IP addresses from recon-cli database and parse them in to a list. Write to a file for active enumeration later
+def _get_ip_addresses(args: list):    # attempt to get IP addresses from recon-cli database and parse them in to a list. Write to a file for active enumeration later
     try:
-        db_output = subprocess.run(["recon-cli", "-C", "db query select ip_address from hosts", ], capture_output=True)
+        db_output = subprocess.run(["recon-cli", "-w", args.workspace, "-C", "db query select ip_address from hosts", ], capture_output=True)
         regex = re.compile(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')   # snag only the IP address from the output
         ip_list = regex.findall(db_output.stdout.decode("utf-8"))
         with open("/tmp/ip-list.txt", "w") as fh:
-            fh.writelines(ip_list)
+            fh.write("\n".join(ip_list) + "\n")
     except Exception as e:
         sys.exit(f"An error occurred gathering IP addresses: Please see below:\n{e}")   # quit the program if any errors occur and inform the user
 
@@ -83,7 +84,7 @@ def _run_active(): # Run active recon on the target IPs found during passive rec
 
 def _import_nmap_results(args: list): # import nmap XML file to recon-ng for completeness
     try:
-        subprocess.run(["recon-cli", "-w", f"{args.workspace}", "-m", "import/nmap", "-o", "FILENAME=/tmp/nmap-out.xml", "-x", ">/dev/null"])
+        subprocess.run(["recon-cli", "-w", f"{args.workspace}", "-m", "import/nmap", "-o", "FILENAME=/tmp/nmap-out.xml", "-x"])
     except Exception as e:
         _cleanup_temp_files()
         sys.exit(f"An error occurred importing the NMAP results. Please refer to error message:\n{e}") # fail out of program if an error occurs
@@ -118,7 +119,7 @@ def main():
     _check_api_key()
     print(f"Pre-checks passed. Beginning passive recon on {args.domain}. This can take some time...", flush=True)
     _run_passive(recon_modules, args)
-    _get_ip_addresses()
+    _get_ip_addresses(args)
     print(f"Passive recon completed. Beginning active recon. Be sure you have permission to scan these IP addresses...", flush=True)
     _run_active()
     print(f"Active recon completed on {args.domain}.", flush=True)
