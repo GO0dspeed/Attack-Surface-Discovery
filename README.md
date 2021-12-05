@@ -1,5 +1,5 @@
 # Attack-Surface-Discovery
-A POC script that leverages recon-NG to perform automated attack surface discovery
+A POC script that leverages recon-NG and NMAP to perform automated attack surface discovery
 
 ## Requirements
 
