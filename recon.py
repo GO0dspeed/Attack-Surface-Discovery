@@ -92,7 +92,7 @@ def _import_nmap_results(args: list): # import nmap XML file to recon-ng for com
 
 def _write_output_results(args: list):  # output results to specified file format
     try:
-        subprocess.run(["recon-cli", "-w", args.workspace, "-m", f"reporting/{args.output}", "-o", f"FILENAME={args.filename}", "-o", "HEADERS=true", "-x"], stdout=subprocess.DEVNULL)
+        subprocess.run(["recon-cli", "-w", args.workspace, "-m", f"reporting/{args.output}", "-o", f"FILENAME={args.filename}", "-o", "HEADERS=true", "-o", "TABLE=ports" "-x"], stdout=subprocess.DEVNULL) # report out adding heder row and using ports table to list services
     except Exception as e:
         sys.exit(f"An error occurred writing results. Please refer to error message:\n{e}")
 
