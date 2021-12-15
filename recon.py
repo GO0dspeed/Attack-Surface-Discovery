@@ -5,7 +5,7 @@ import subprocess, os, argparse, sys, re, getpass
 
 def _get_arguments():
     parser = argparse.ArgumentParser()  # Define the argument parser
-    subparsers = parser.add_subparsers(help="sub-command help)") # Define subparser
+    subparsers = parser.add_subparsers(help="sub-command help", dest="command") # Define subparser
     parser.add_argument("-o", "--output", help="The output format. Acceptable formats are: csv,excel,json", choices=["csv","excel","json"], required=True) # output choices
     parser.add_argument("-w", "--workspace", help="The name of the workspace to use for this run", required=True) # Workstpace to use for recon run
     parser.add_argument("-f", "--filename", help="Name or path of output file", required=True)  # output file
@@ -35,6 +35,7 @@ def _check_install(): # Validate that recon-ng, recon-cli, and nmap are installe
 def _check_recon_modules(): # Look for the presence of required modules. If not present use subprocess to install items not present on the list
     modules = [
         "import/nmap",
+        "import/list",
         "recon/domains-hosts/hackertarget",
         "recon/domains-hosts/google_site_web",
         "recon/domains-hosts/shodan_hostname",
@@ -48,11 +49,11 @@ def _check_recon_modules(): # Look for the presence of required modules. If not 
     modulelist = subprocess.run(["recon-cli", "-M"], capture_output=True)   # Check for required modules
     for i in modules:
         if bytes(i, "utf-8") in modulelist.stdout: # subprocess returns a bytes object, so convert string to bytes to check the output for each item
-            return
+            continue
         else:
             print(f"Could not find module {i}, installing now..")
             subprocess.run(["recon-cli", f"-C marketplace install {i}"])
-            return
+            continue
 
 def _check_api_key():   # Checks for the presence of the Shodan API key. If not present it will prompt the user to add it using getpass (hides password from user / terminal)
     reg = re.compile(rb'shodan_api \| [A-Za-z]+')   # Regex to identify if shodan key is in output of command
@@ -68,7 +69,10 @@ def _check_api_key():   # Checks for the presence of the Shodan API key. If not 
 def _run_passive(modules: list, args: dict):    # Runs passive recon for a given domain. Using the list of recon modules above
     for i in modules:
         try:
-            subprocess.run(["recon-cli", "-w", args.workspace, "-m", i, "-o", f"SOURCE={args.input}", "-x"], stdout=subprocess.DEVNULL) # Run passive enumeration. Output is supressed. DB will update with results
+            if args.command == "domain":
+                subprocess.run(["recon-cli", "-w", args.workspace, "-m", i, "-o", f"SOURCE={args.input}", "-x"], stdout=subprocess.DEVNULL) # Run passive enumeration. Output is supressed. DB will update with results
+            else:
+                subprocess.run(["recon-cli", "-w", args.workspace, "-m", i, "-x"], stdout=subprocess.DEVNULL) # Run passive enumeration. Output is supressed. DB will update with results
         except Exception as e:
             sys.exit(f"An Error Occurred during passive recon. Please refer to error message:\n{e}")   # end program
     return
@@ -89,16 +93,22 @@ def _run_active(): # Run active recon on the target IPs found during passive rec
     except Exception as e:
         sys.exit(f"An error occured during active recon. Please refer to error message:\n{e}")
 
-def _import_nmap_results(args: list): # import nmap XML file to recon-ng for completeness
+def _import_nmap_results(args: dict): # import nmap XML file to recon-ng for completeness
     try:
-        subprocess.run(["recon-cli", "-w", f"{args.workspace}", "-m", "import/nmap", "-o", "FILENAME=/tmp/nmap-out", "-x"], stdout=subprocess.DEVNULL)
+        subprocess.run(["recon-cli", "-w", f"{args.workspace}", "-m", "import/nmap", "-o", f"FILENAME={args.input}" if args.command == "nmap" else "FILENAME=/tmp/nmap-out", "-x"], stdout=subprocess.DEVNULL)
     except Exception as e:
         _cleanup_temp_files()
         sys.exit(f"An error occurred importing the NMAP results. Please refer to error message:\n{e}") # fail out of program if an error occurs
 
+def _import_file_ips(args: dict):
+    try:
+        subprocess.run(["recon-cli", "-w", args.workspace, "-m", "import/list", "-o", "COLUMN=ip_address", "-o", "TABLE=hosts", "-o", f"FILENAME={args.input}", "-x"], stdout=subprocess.DEVNULL)
+    except Exception as e:
+        sys.exit(f"An error occurred importing {args.input}. Please refer to the error message:\n{e}")
+
 def _write_output_results(args: list):  # output results to specified file format
     try:
-        subprocess.run(["recon-cli", "-w", args.workspace, "-m", f"reporting/{args.output}", "-o", f"FILENAME={args.filename}", "-o", "HEADERS=true", "-o", "TABLE=ports" "-x"], stdout=subprocess.DEVNULL) # report out adding heder row and using ports table to list services
+        subprocess.run(["recon-cli", "-w", args.workspace, "-m", f"reporting/{args.output}", "-o", f"FILENAME={args.filename}", "-o", "HEADERS=true", "-o", "TABLE=ports" "-x"], stdout=subprocess.DEVNULL) # report out adding header row and using ports table to list services
     except Exception as e:
         sys.exit(f"An error occurred writing results. Please refer to error message:\n{e}")
 
@@ -108,11 +118,13 @@ def _cleanup_temp_files():  # housekeeping post run
         os.remove("/tmp/ip-list.txt")
         os.remove("/tmp/nmap-out")
     except Exception:
-        print(f"Unable to remove files in /tmp/. Please delete /tmp/ip-list.txt and /tmp/nmap-out.xml manually..")  # just in case the files are not deleted automatically
+        print(f"Unable to remove files in /tmp/. Please delete /tmp/ip-list.txt and /tmp/nmap-out manually..")  # just in case the files are not deleted automatically
 
 def main():
     args = _get_arguments()
     recon_modules = [
+        "recon/hosts-hosts/resolve",
+        "recon/hosts-ports/shodan_ip",
         "recon/domains-hosts/google_site_web",
         "recon/domains-hosts/hackertarget",
         "recon/domains-hosts/shodan_hostname",
@@ -127,6 +139,10 @@ def main():
     _check_recon_modules()
     _check_api_key()
     print(f"[*] Pre-checks passed. Beginning passive recon on {args.input}. This can take some time...", flush=True)
+    if args.command == "nmap":
+        _import_nmap_results(args)
+    elif args.command == "ip":
+        _import_file_ips(args)
     _run_passive(recon_modules, args)
     _get_ip_addresses(args)
     print(f"[*] Passive recon completed. Beginning active recon. Be sure you have permission to scan these IP addresses...", flush=True)
