@@ -5,10 +5,16 @@ import subprocess, os, argparse, sys, re, getpass
 
 def _get_arguments():
     parser = argparse.ArgumentParser()  # Define the argument parser
-    parser.add_argument("domain", help="The domain to recon")   # Domain to start recon
+    subparsers = parser.add_subparsers(help="sub-command help)") # Define subparser
     parser.add_argument("-o", "--output", help="The output format. Acceptable formats are: csv,excel,json", choices=["csv","excel","json"], required=True) # output choices
     parser.add_argument("-w", "--workspace", help="The name of the workspace to use for this run", required=True) # Workstpace to use for recon run
     parser.add_argument("-f", "--filename", help="Name or path of output file", required=True)  # output file
+    domain_parser = subparsers.add_parser("domain", help="The domain to recon")   # Domain subparser
+    domain_parser.add_argument("input", help="The domain to recon")
+    ip_parser = subparsers.add_parser("ip", help="Text file containing a list of IPs (one per line)")   # IP File subparser
+    ip_parser.add_argument("input", help="The filename containing a list of IPs to recon")
+    nmap_parser = subparsers.add_parser("nmap", help="Import NMAP results (xml) to create target list")   # NMAP file subparser
+    nmap_parser.add_argument("input", help="The xml output filename from NMAP to parse")
     return parser.parse_args()
 
 def _check_install(): # Validate that recon-ng, recon-cli, and nmap are installed with simple system tests for files. Fail and exit if either are not present
@@ -59,15 +65,15 @@ def _check_api_key():   # Checks for the presence of the Shodan API key. If not 
         subprocess.run(["recon-cli", f"-C keys add shodan_api {key}"])
         return  # End function after adding shodan API key
 
-def _run_passive(modules: list, args: list):    # Runs passive recon for a given domain. Using the list of recon modules above
+def _run_passive(modules: list, args: dict):    # Runs passive recon for a given domain. Using the list of recon modules above
     for i in modules:
         try:
-            subprocess.run(["recon-cli", "-w", args.workspace, "-m", i, "-o", f"SOURCE={args.domain}", "-x"], stdout=subprocess.DEVNULL) # Run passive enumeration. Output is supressed. DB will update with results
+            subprocess.run(["recon-cli", "-w", args.workspace, "-m", i, "-o", f"SOURCE={args.input}", "-x"], stdout=subprocess.DEVNULL) # Run passive enumeration. Output is supressed. DB will update with results
         except Exception as e:
             sys.exit(f"An Error Occurred during passive recon. Please refer to error message:\n{e}")   # end program
     return
 
-def _get_ip_addresses(args: list):    # attempt to get IP addresses from recon-cli database and parse them in to a list. Write to a file for active enumeration later
+def _get_ip_addresses(args: dict):    # attempt to get IP addresses from recon-cli database and parse them in to a list. Write to a file for active enumeration later
     try:
         db_output = subprocess.run(["recon-cli", "-w", args.workspace, "-C", "db query select ip_address from hosts", ], capture_output=True)
         regex = re.compile(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')   # snag only the IP address from the output
@@ -114,17 +120,18 @@ def main():
         "recon/hosts-ports/shodan_ip",
         "recon/netblocks-hosts/shodan_net",
     ]
-    print(f"[*] Attempting automatic passive and active recon on {args.domain}.\nThis could take some time for larger domains...", flush=True)
+
+    print(f"[*] Attempting automatic passive and active recon on {args.input}.\nThis could take some time for larger domains or address ranges...", flush=True)
     print(f"[*] Beginning installation pre-checks..", flush=True)
     _check_install()
     _check_recon_modules()
     _check_api_key()
-    print(f"[*] Pre-checks passed. Beginning passive recon on {args.domain}. This can take some time...", flush=True)
+    print(f"[*] Pre-checks passed. Beginning passive recon on {args.input}. This can take some time...", flush=True)
     _run_passive(recon_modules, args)
     _get_ip_addresses(args)
     print(f"[*] Passive recon completed. Beginning active recon. Be sure you have permission to scan these IP addresses...", flush=True)
     _run_active()
-    print(f"[*] Active recon completed on {args.domain}.", flush=True)
+    print(f"[*] Active recon completed on {args.input}.", flush=True)
     print(f"[*] Normalizing results and outputting to {args.output}.")
     _import_nmap_results(args)
     _write_output_results(args)
