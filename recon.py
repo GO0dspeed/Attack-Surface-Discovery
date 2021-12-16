@@ -42,6 +42,8 @@ def _check_recon_modules(): # Look for the presence of required modules. If not 
         "recon/hosts-hosts/resolve",
         "recon/hosts-ports/shodan_ip",
         "recon/netblocks-hosts/shodan_net",
+        "discovery/info_disclosure/interesting_files",
+        "recon/hosts-hosts/reverse_resolve",
         "reporting/csv",
         "reporting/json",
         "reporting/xlsx"
@@ -124,13 +126,16 @@ def main():
     args = _get_arguments()
     recon_modules = [
         "recon/hosts-hosts/resolve",
+        "recon/hosts-hosts/reverse_resolve",
         "recon/hosts-ports/shodan_ip",
         "recon/domains-hosts/google_site_web",
         "recon/domains-hosts/hackertarget",
         "recon/domains-hosts/shodan_hostname",
         "recon/hosts-hosts/resolve",
+        "recon/hosts-hosts/reverse_resolve",
         "recon/hosts-ports/shodan_ip",
         "recon/netblocks-hosts/shodan_net",
+        "discovery/info_disclosure/interesting_files"
     ]
 
     print(f"[*] Attempting automatic passive and active recon on {args.input}.\nThis could take some time for larger domains or address ranges...", flush=True)
