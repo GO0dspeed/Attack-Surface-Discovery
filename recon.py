@@ -91,7 +91,7 @@ def _get_ip_addresses(args: dict):    # attempt to get IP addresses from recon-c
 
 def _run_active(): # Run active recon on the target IPs found during passive recon
     try:
-        subprocess.run(["nmap", "-sC", "-sV", "-oX", "/tmp/nmap-out", "-iL", "/tmp/ip-list.txt"], stdout=subprocess.DEVNULL)
+        subprocess.run(["nmap", "-sC", "-sV", "-oX", "--script=vuln" "/tmp/nmap-out", "-iL", "/tmp/ip-list.txt"], stdout=subprocess.DEVNULL)
     except Exception as e:
         sys.exit(f"An error occured during active recon. Please refer to error message:\n{e}")
 
