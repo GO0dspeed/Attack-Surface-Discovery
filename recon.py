@@ -6,7 +6,7 @@ import subprocess, os, argparse, sys, re, getpass
 def _get_arguments():
     parser = argparse.ArgumentParser()  # Define the argument parser
     subparsers = parser.add_subparsers(help="sub-command help", dest="command") # Define subparser
-    parser.add_argument("-o", "--output", help="The output format. Acceptable formats are: csv,excel,json", choices=["csv","excel","json"], required=True) # output choices
+    parser.add_argument("-o", "--output", help="The output format. Acceptable formats are: csv,xlsx,json", choices=["csv","xlsx","json"], required=True) # output choices
     parser.add_argument("-w", "--workspace", help="The name of the workspace to use for this run", required=True) # Workstpace to use for recon run
     parser.add_argument("-f", "--filename", help="Name or path of output file", required=True)  # output file
     domain_parser = subparsers.add_parser("domain", help="The domain to recon")   # Domain subparser
@@ -91,7 +91,7 @@ def _get_ip_addresses(args: dict):    # attempt to get IP addresses from recon-c
 
 def _run_active(): # Run active recon on the target IPs found during passive recon
     try:
-        subprocess.run(["nmap", "-sC", "-sV", "-oX", "--script=vuln" "/tmp/nmap-out", "-iL", "/tmp/ip-list.txt"], stdout=subprocess.DEVNULL)
+        subprocess.run(["nmap", "-sC", "-sV", "-oX", "/tmp/nmap-out", "-iL", "/tmp/ip-list.txt"], stdout=subprocess.DEVNULL)
     except Exception as e:
         sys.exit(f"An error occured during active recon. Please refer to error message:\n{e}")
 
@@ -110,7 +110,7 @@ def _import_file_ips(args: dict):
 
 def _write_output_results(args: list):  # output results to specified file format
     try:
-        subprocess.run(["recon-cli", "-w", args.workspace, "-m", f"reporting/{args.output}", "-o", f"FILENAME={args.filename}", "-o", "HEADERS=true", "-o", "TABLE=ports" "-x"], stdout=subprocess.DEVNULL) # report out adding header row and using ports table to list services
+        subprocess.run(["recon-cli", "-w", args.workspace, "-m", f"reporting/{args.output}", "-o", f"FILENAME={args.filename}", "-o", "HEADERS=true", "-o", "TABLE=ports", "-x"], stdout=subprocess.DEVNULL) # report out adding header row and using ports table to list services
     except Exception as e:
         sys.exit(f"An error occurred writing results. Please refer to error message:\n{e}")
 
