@@ -17,10 +17,11 @@ def _get_arguments():
     nmap_parser.add_argument("input", help="The xml output filename from NMAP to parse")
     return parser.parse_args()
 
-def _check_install(): # Validate that recon-ng, recon-cli, and nmap are installed with simple system tests for files. Fail and exit if either are not present
+def _check_install(): # Validate that recon-ng, recon-cli, eyewitness, and nmap are installed with simple system tests for files. Fail and exit if either are not present
     reconng = False
     reconcli = False
     nmap = False
+    eyewitness = False
     for i in os.path.expandvars("$PATH").split(":"):
         if os.access(f"{i}/recon-ng", os.F_OK):
             reconng = True
@@ -28,6 +29,8 @@ def _check_install(): # Validate that recon-ng, recon-cli, and nmap are installe
             reconcli = True
         elif os.access(f"{i}/nmap", os.F_OK):
             nmap = True
+        elif os.access(f"{i}/Eyewitness.py", os.F_OK):
+            eyewitness = True
     if (reconng or reconcli or nmap) == False:
         sys.exit("Error: recon-ng and recon-cli must be installed. Please check installation")
     return
@@ -89,11 +92,17 @@ def _get_ip_addresses(args: dict):    # attempt to get IP addresses from recon-c
     except Exception as e:
         sys.exit(f"An error occurred gathering IP addresses: Please see below:\n{e}")   # quit the program if any errors occur and inform the user
 
-def _run_active(): # Run active recon on the target IPs found during passive recon
+def _run_nmap(): # Run active recon on the target IPs found during passive recon
     try:
         subprocess.run(["nmap", "-sC", "-sV", "-oX", "/tmp/nmap-out", "-iL", "/tmp/ip-list.txt"], stdout=subprocess.DEVNULL)
     except Exception as e:
         sys.exit(f"An error occured during active recon. Please refer to error message:\n{e}")
+
+def _run_eyewitness(args): # Run Eyewitness active recon on the target
+    try:
+        subprocess.run(["Eyewitness.py", "--web", "-f", "/tmp/ip-list.txt", "--resolve" ,"--prepend-https", "-d", f"{args.output}"], stdout=subprocess.DEVNULL)
+    except Exception as e:
+        sys.exit(f"An error occurred during execution of eyewitness. Please refer to error message:\n{e}")
 
 def _import_nmap_results(args: dict): # import nmap XML file to recon-ng for completeness
     try:
@@ -151,7 +160,8 @@ def main():
     _run_passive(recon_modules, args)
     _get_ip_addresses(args)
     print(f"[*] Passive recon completed. Beginning active recon. Be sure you have permission to scan these IP addresses...", flush=True)
-    _run_active()
+    _run_nmap()
+    _run_eyewitness(args)
     print(f"[*] Active recon completed on {args.input}.", flush=True)
     print(f"[*] Normalizing results and outputting to {args.output}.")
     _import_nmap_results(args)
