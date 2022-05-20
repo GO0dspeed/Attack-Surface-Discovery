@@ -100,7 +100,7 @@ def _run_nmap(): # Run active recon on the target IPs found during passive recon
 
 def _run_eyewitness(args): # Run Eyewitness active recon on the target
     try:
-        subprocess.run(["Eyewitness.py", "--web", "-f", "/tmp/ip-list.txt", "--resolve" ,"--prepend-https", "-d", f"{args.output}"], stdout=subprocess.DEVNULL)
+        subprocess.run(["EyeWitness.py", "--web", "-f", "/tmp/ip-list.txt", "--resolve" ,"--prepend-https", "-d", f"{args.output}"], stdout=subprocess.DEVNULL)
     except Exception as e:
         sys.exit(f"An error occurred during execution of eyewitness. Please refer to error message:\n{e}")
 
