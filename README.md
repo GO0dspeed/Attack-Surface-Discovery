@@ -1,6 +1,8 @@
 # Attack-Surface-Discovery
 
-A POC script that leverages recon-NG and NMAP to perform automated attack surface discovery based on a given domain name. Results can be output in CSV, Excel, or JSON format. 
+A POC script that leverages recon-NG and NMAP to perform automated attack surface discovery based on a given domain name. Results can be output in CSV, Excel, or JSON format.
+
+New feature will also run EyeWitness against any IP addresses located and attempt to gather screenshots of websites.
 
 ## Requirements
 
@@ -10,6 +12,7 @@ In order to run this code the following requirements should be met:
 * Copy of recon-ng installed
 * Copy of recon-cli installed (recon-ng CLI)
 * Copy of NMAP for active scanning
+* Copy of EyeWitness added to PATH (easy way is to use a symlink to your EyeWitness install)
 * Python 3.x
 
 ## Installation

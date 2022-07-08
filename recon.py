@@ -29,7 +29,7 @@ def _check_install(): # Validate that recon-ng, recon-cli, eyewitness, and nmap 
             reconcli = True
         elif os.access(f"{i}/nmap", os.F_OK):
             nmap = True
-        elif os.access(f"{i}/Eyewitness.py", os.F_OK):
+        elif os.access(f"{i}/EyeWitness.py", os.F_OK):
             eyewitness = True
     if (reconng or reconcli or nmap) == False:
         sys.exit("Error: recon-ng and recon-cli must be installed. Please check installation")
@@ -100,7 +100,7 @@ def _run_nmap(): # Run active recon on the target IPs found during passive recon
 
 def _run_eyewitness(args): # Run Eyewitness active recon on the target
     try:
-        subprocess.run(["EyeWitness.py", "--web", "-f", "/tmp/ip-list.txt", "--resolve" ,"--prepend-https", "-d", f"{args.output}"], stdout=subprocess.DEVNULL)
+        subprocess.run(["EyeWitness.py", "--web", "-f", "/tmp/ip-list.txt", "--resolve" ,"--prepend-https", "-d", f"{args.filename}"], stdout=subprocess.DEVNULL)
     except Exception as e:
         sys.exit(f"An error occurred during execution of eyewitness. Please refer to error message:\n{e}")
 
@@ -113,7 +113,7 @@ def _import_nmap_results(args: dict): # import nmap XML file to recon-ng for com
 
 def _import_file_ips(args: dict):
     try:
-        subprocess.run(["recon-cli", "-w", args.workspace, "-m", "import/list", "-o", "COLUMN=ip_address", "-o", "TABLE=hosts", "-o", f"FILENAME={args.input}", "-x"], stdout=subprocess.DEVNULL)
+        subprocess.run(["recon-cli", "-w", args.workspace, "-m", "import/list", "-o", "COLUMN=ip_address", "-o", "TABLE=hosts", "-o", f"FILENAME={os.path.abspath(args.input)}", "-x"], stdout=subprocess.DEVNULL)
     except Exception as e:
         sys.exit(f"An error occurred importing {args.input}. Please refer to the error message:\n{e}")
 
